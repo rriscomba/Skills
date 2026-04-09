@@ -1,6 +1,6 @@
 # Skills para Claude Code
 
-Colección de skills reutilizables para [Claude Code](https://claude.ai/code), organizadas para instalación sencilla y mantenimiento escalable.
+Colección de skills reutilizables para Claude, organizadas para instalación sencilla y mantenimiento escalable.
 
 ## Skills disponibles
 
