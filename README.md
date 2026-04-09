@@ -12,39 +12,38 @@ Colección de skills reutilizables para [Claude Code](https://claude.ai/code), o
 
 ## Instalación
 
-### Opción A — Desde el zip (recomendado)
+### Opción A — Claude Code Web (sin comandos)
 
 1. Descarga el `.zip` del skill desde la tabla de arriba
-2. Ejecuta:
+2. En Claude Code web, ve a **Personalizar → Habilidades → Crear habilidad → Subir una habilidad**
+3. Selecciona el `.zip` descargado
+4. Listo — el skill queda activo en tu sesión
+
+---
+
+### Opción B — Terminal (desde el zip)
 
 ```bash
 ./install.sh bpmn-process-designer.zip
 ```
 
-Listo. El skill queda disponible en todas las sesiones de Claude Code.
-
 ---
 
-### Opción B — Desde el repositorio
+### Opción C — Terminal (manual, sin script)
 
 ```bash
-# Clonar el repositorio
-git clone https://github.com/rriscomba/Skills.git
-cd Skills
-
-# Instalar un skill específico
-./install.sh bpmn-process-designer
-
-# Instalar todos los skills
-./install.sh
+unzip bpmn-process-designer.zip -d ~/.claude/skills/
 ```
 
 ---
 
-### Opción C — Manual (sin script)
+### Opción D — Terminal (desde el repositorio)
 
 ```bash
-unzip bpmn-process-designer.zip -d ~/.claude/skills/
+git clone https://github.com/rriscomba/Skills.git
+cd Skills
+./install.sh bpmn-process-designer   # un skill
+./install.sh                          # todos los skills
 ```
 
 ---
@@ -58,7 +57,7 @@ skills/
     ├── SKILL.md                   # Definición del skill
     └── references/                # Archivos de referencia opcionales
         └── *.md
-install.sh                         # Script de instalación
+install.sh                         # Script de instalación por terminal
 ```
 
 ### Formato de SKILL.md
