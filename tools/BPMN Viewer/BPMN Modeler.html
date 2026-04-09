@@ -7,7 +7,7 @@ Copyright (c) 2026 Raúl A. Risco Castillo
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BPMN Modeler</title>
+    <title>BPMN Studio - Prototipado Profesional</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -74,8 +74,8 @@ Copyright (c) 2026 Raúl A. Risco Castillo
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             </div>
             <div>
-                <h1 class="text-sm font-bold leading-tight tracking-tight uppercase opacity-90">BPMN Modeler</h1>
-                <p class="text-[10px] text-slate-400 font-medium tracking-wide">EDICIÓN LIBRE</p>
+                <h1 class="text-sm font-bold leading-tight tracking-tight uppercase opacity-90">BPMN Studio</h1>
+                <p class="text-[10px] text-slate-400 font-medium tracking-wide">EDICIÓN PROFESIONAL</p>
             </div>
         </div>
 
@@ -563,7 +563,19 @@ Copyright (c) 2026 Raúl A. Risco Castillo
         });
 
         document.getElementById('btn-new').addEventListener('click', () => {
-            openDiagram(`<?xml version="1.0" encoding="UTF-8"?><bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn"><bpmn:process id="Process_1" isExecutable="false"><bpmn:startEvent id="StartEvent_1"/></bpmn:process></bpmn:definitions>`);
+            openDiagram(`<?xml version="1.0" encoding="UTF-8"?>
+            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+              <bpmn:process id="Process_1" isExecutable="false">
+                <bpmn:startEvent id="StartEvent_1" />
+              </bpmn:process>
+              <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+                <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+                  <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+                    <dc:Bounds x="152" y="102" width="36" height="36" />
+                  </bpmndi:BPMNShape>
+                </bpmndi:BPMNPlane>
+              </bpmndi:BPMNDiagram>
+            </bpmn:definitions>`);
         });
 
         document.getElementById('btn-example').addEventListener('click', () => openDiagram(processEjemploXML));
