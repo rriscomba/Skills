@@ -4,48 +4,60 @@ Colección de skills reutilizables para [Claude Code](https://claude.ai/code), o
 
 ## Skills disponibles
 
-| Skill | Descripción | Activador | Dominio |
+| Skill | Descripción | Dominio | Descargar |
 |---|---|---|---|
-| [bpmn-process-designer](skills/bpmn-process-designer/) | Convierte documentos narrativos o procedimentales en especificaciones intermedias BPMN 2.0 validadas, listas para diagramar o serializar a XML | Entrega un documento de proceso, manual, procedimiento o narrativa de negocio | Modelado de procesos |
+| [bpmn-process-designer](skills/bpmn-process-designer/) | Convierte documentos narrativos o procedimentales en especificaciones intermedias BPMN 2.0 validadas, listas para diagramar o exportar a XML | Modelado de procesos | [bpmn-process-designer.zip](dist/bpmn-process-designer.zip) |
 
 ---
 
 ## Instalación
 
-### Opción A — Script automático
+### Opción A — Claude Code Web (sin comandos)
+
+1. Descarga el `.zip` del skill desde la tabla de arriba
+2. En Claude Code web, ve a **Personalizar → Habilidades → Crear habilidad → Subir una habilidad**
+3. Selecciona el `.zip` descargado
+4. Listo — el skill queda activo en tu sesión
+
+---
+
+### Opción B — Terminal (desde el zip)
 
 ```bash
-# Clonar el repositorio
+./install.sh bpmn-process-designer.zip
+```
+
+---
+
+### Opción C — Terminal (manual, sin script)
+
+```bash
+unzip bpmn-process-designer.zip -d ~/.claude/skills/
+```
+
+---
+
+### Opción D — Terminal (desde el repositorio)
+
+```bash
 git clone https://github.com/rriscomba/Skills.git
 cd Skills
-
-# Instalar un skill específico
-./install.sh bpmn-process-designer
-
-# Instalar todos los skills
-./install.sh
+./install.sh bpmn-process-designer   # un skill
+./install.sh                          # todos los skills
 ```
-
-### Opción B — Manual
-
-Copiar la carpeta del skill a `~/.claude/skills/`:
-
-```bash
-cp -r skills/bpmn-process-designer ~/.claude/skills/
-```
-
-Después de instalar, el skill estará disponible automáticamente en todas las sesiones de Claude Code.
 
 ---
 
 ## Estructura del repositorio
 
 ```
+dist/                              # Zips listos para descargar e instalar
 skills/
 └── <nombre-del-skill>/
-    ├── SKILL.md          # Definición del skill (frontmatter + instrucciones)
-    └── references/       # Archivos de referencia opcionales citados en SKILL.md
+    ├── SKILL.md                   # Definición del skill
+    └── references/                # Archivos de referencia opcionales
         └── *.md
+install.sh                         # Script de instalación por terminal
 ```
 
 ### Formato de SKILL.md
@@ -75,8 +87,9 @@ metadata:
 1. Crear la carpeta `skills/<nombre-del-skill>/`
 2. Agregar `SKILL.md` con el formato indicado arriba
 3. Agregar archivos de referencia en `references/` si aplica
-4. Actualizar la tabla de skills en este README
-5. Abrir un Pull Request
+4. Empaquetar: `cd skills && zip -r ../dist/<nombre-del-skill>.zip <nombre-del-skill>/`
+5. Actualizar la tabla de skills en este README
+6. Abrir un Pull Request
 
 ---
 
