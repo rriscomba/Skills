@@ -1,12 +1,18 @@
 # Skills para Claude Code
 
-Colección de skills reutilizables para Claude, organizadas para instalación sencilla y mantenimiento escalable.
+Colección de skills reutilizables para Claude, organizadas para instalación sencilla y mantenimiento escalable. El repositorio incluye también herramientas complementarias, como el [Visualizador BPMN](tools/BPMN%20Viewer/), una aplicación HTML standalone para visualizar y editar diagramas BPMN 2.0 directamente en el navegador.
 
 ## Skills disponibles
 
 | Skill | Descripción | Dominio | Descargar |
 |---|---|---|---|
 | [bpmn-process-designer](skills/bpmn-process-designer/) | Convierte documentos narrativos o procedimentales en especificaciones intermedias BPMN 2.0 validadas, listas para diagramar o exportar a XML | Modelado de procesos | [bpmn-process-designer.zip](dist/bpmn-process-designer.zip) |
+
+## Herramientas disponibles
+
+| Herramienta | Descripción | Usar |
+|---|---|---|
+| [BPMN Viewer](tools/BPMN%20Viewer/) | Aplicación HTML standalone para visualizar y editar diagramas BPMN 2.0 en el navegador, sin dependencias externas | [Abrir BPMN Viewer](tools/BPMN%20Viewer/BPMN%20Modeler.html) |
 
 ---
 
