@@ -1,7 +1,8 @@
 # Catálogo de Anti-patrones BPMN 2.0
+## Versión 2.0
 
 Basado en: Radulian (2020) *Rethinking BPMN*, Silver (2012) *BPMN Method and Style*,
-White (2004) *Introduction to BPMN*, Bizagi (2017) *BPMN Quick Start Guide*.
+White (2004) *Introduction to BPMN*, Bizagi (2017) *BPMN Quick Start Guide*, OMG (2013) *BPMN 2.0 Spec*.
 
 ---
 
@@ -36,7 +37,7 @@ White (2004) *Introduction to BPMN*, Bizagi (2017) *BPMN Quick Start Guide*.
 **Detección**: el documento menciona "en paralelo" o "simultáneamente" pero no indica cuándo se sincronizan.
 **Corrección**: añadir Parallel Join (o Inclusive Join) antes de continuar. Ver `elementos.md §3`.
 
-### A6 — Conditions sin etiqueta en gateway
+### A6 — Condiciones sin etiqueta en gateway
 **Problema**: un Exclusive o Inclusive Gateway tiene arcos de salida sin condición.
 **Efecto BPMN**: semánticamente ambiguo; el motor no sabe qué ruta tomar.
 **Detección**: el documento menciona una decisión pero no especifica los criterios.
@@ -50,7 +51,7 @@ White (2004) *Introduction to BPMN*, Bizagi (2017) *BPMN Quick Start Guide*.
 
 ### A8 — Múltiples Conditional Sequence Flows saliendo de la misma actividad
 **Problema**: se usan dos o más Conditional Sequence Flows (mini-diamante) saliendo de una misma tarea para representar una bifurcación.
-**Efecto BPMN**: semánticamente incorrecto; el Conditional Sequence Flow no es un mecanismo de enrutamiento sino una condición opcional de paso. Usar varios sobre la misma actividad replica el comportamiento de un Gateway Inclusivo sin declararlo, generando ambigüedad sobre qué pasa si ninguna condición es verdadera.
+**Efecto BPMN**: semánticamente incorrecto; replica el comportamiento de un Gateway Inclusivo sin declararlo. Genera ambigüedad sobre qué pasa si ninguna condición es verdadera.
 **Detección**: múltiples arcos con mini-diamante saliendo del mismo nodo de actividad.
 **Corrección**: reemplazar por Gateway Exclusiva (si solo un camino puede activarse) o Gateway Inclusiva (si uno o más pueden activarse). El Conditional Sequence Flow solo es válido cuando hay un único arco condicional saliendo de una actividad.
 
@@ -59,6 +60,52 @@ White (2004) *Introduction to BPMN*, Bizagi (2017) *BPMN Quick Start Guide*.
 **Efecto BPMN**: la actividad destino se ejecuta tantas veces como tokens lleguen (N ejecuciones no intencionadas).
 **Detección**: múltiples sequence flows entrantes a una actividad que provienen de ramas abiertas por un split AND o OR.
 **Corrección**: insertar la gateway de join del mismo tipo (Parallel join para AND; Inclusive join para OR) antes de la actividad destino. Solo en caso de XOR, la convergencia directa a una actividad es aceptable semánticamente (aunque se recomienda gateway de join para claridad).
+
+### A10 — Compuerta impura (Split + Join en el mismo rombo)
+**Problema**: una compuerta recibe múltiples arcos entrantes Y emite múltiples arcos salientes simultáneamente en el mismo elemento.
+**Efecto BPMN**: semánticamente inválido según la especificación OMG. El motor no puede determinar si debe sincronizar los tokens entrantes antes de divergir, o divergir primero. Comportamiento impredecible.
+**Detección**: un rombo con más de 1 arco de entrada y más de 1 arco de salida.
+**Corrección**: separar en dos compuertas en secuencia: primero un join (converging) y luego un split (diverging) del tipo correspondiente.
+
+### A11 — Ausencia de Default Flow en gateway XOR u OR
+**Problema**: una compuerta Exclusive o Inclusive no tiene ningún arco de salida marcado como "default".
+**Efecto BPMN**: si en tiempo de ejecución ninguna condición es verdadera, el proceso queda en deadlock (ningún token avanza). El motor BPMS lanza un error de enrutamiento.
+**Detección**: compuerta XOR u OR sin ningún arco marcado con barra diagonal.
+**Corrección**: designar un arco de salida como default (el más probable o el de excepción). En XML: atributo `default` en el gateway; ese sequence flow no lleva `<conditionExpression>`.
+
+### A12 — End Terminate en proceso con flujos paralelos sin justificación
+**Problema**: se usa End Terminate en uno de los ramales de un proceso paralelo sin documentar que la intención es abortar todo el proceso.
+**Efecto BPMN**: el End Terminate aniquila TODOS los tokens activos, incluyendo ramales paralelos que aún no terminaron. Si la intención era solo finalizar ese ramal, el comportamiento es incorrecto.
+**Detección**: presencia de End Terminate en un proceso con Parallel Gateway divergente sin justificación explícita de aborto total.
+**Corrección**: si solo se quiere terminar ese ramal → usar End None. Si se quiere abortar todo el proceso → documentar explícitamente la decisión y usar End Terminate.
+
+### A13 — Event Sub-Process con sequence flows de entrada o salida
+**Problema**: un Event Sub-Process (borde punteado) está conectado al flujo del proceso padre mediante sequence flows.
+**Efecto BPMN**: inválido. El Event Sub-Process se detona por eventos, no por flujo de secuencia.
+**Detección**: arcos de sequence flow entrando o saliendo del borde de un sub-proceso con borde punteado.
+**Corrección**: eliminar los sequence flows. El Event Sub-Process solo se conecta al proceso padre a través de su Start Event interno (que atrapa el evento detonante).
+
+### A14 — Call Activity para lógica específica de un solo proceso
+**Problema**: se usa Call Activity (borde muy grueso) para un subproceso que solo aplica a ese proceso específico.
+**Efecto**: sobrecarga innecesaria de gobernanza; el proceso referenciado no se reutiliza en ningún otro contexto.
+**Corrección**: usar Sub-proceso embebido o colapsado. Reservar Call Activity para lógica genuinamente reutilizable en múltiples procesos de la organización.
+
+### A15 — Tarea usada para "esperar"
+**Problema**: se crea una tarea llamada "Esperar respuesta" o "Aguardar aprobación".
+**Efecto BPMN**: una tarea representa trabajo activo. Una espera es un estado pasivo que debe modelarse con un evento.
+**Detección**: nombres de tarea que contienen "esperar", "aguardar", "en espera", "pendiente de".
+**Corrección**:
+- Si espera un mensaje → Intermediate Message Event (Catch) o Receive Task.
+- Si espera un tiempo → Intermediate Timer Event (Catch).
+- Si espera que algo ocurra primero → Event-Based Gateway.
+
+### A16 — Lane creado para sistema pasivo (BD, ERP, repositorio)
+**Problema**: se crea un lane llamado "Base de Datos", "ERP" o "Sistema de Gestión" para colocar allí tareas.
+**Efecto**: los carriles son para actores que **ejecutan** trabajo. Los sistemas pasivos no ejecutan; son herramientas.
+**Corrección**:
+- Si el sistema es usado por un humano → User Task en el lane del humano.
+- Si el sistema actúa solo → Service Task en el lane del área responsable.
+- Si el sistema es una entidad externa → Pool separado (black-box).
 
 ---
 
@@ -72,7 +119,7 @@ White (2004) *Introduction to BPMN*, Bizagi (2017) *BPMN Quick Start Guide*.
 ### B2 — Nombre de gateway sin pregunta
 **Problema**: el gateway se llama "Decisión" o "Verificación" en lugar de indicar la pregunta que se está respondiendo.
 **Efecto**: el lector no puede entender sin contexto adicional qué criterio se está evaluando.
-**Corrección**: nombrar con pregunta. Ej: "¿Información completa?", "¿Monto > $10,000?".
+**Corrección**: nombrar con pregunta cerrada. Ej: "¿Información completa?", "¿Monto > $10,000?".
 
 ### B3 — Evento de inicio ambiguo
 **Problema**: el Start Event se llama "Inicio" o "Comienzo" sin indicar el trigger.
@@ -91,7 +138,12 @@ White (2004) *Introduction to BPMN*, Bizagi (2017) *BPMN Quick Start Guide*.
 
 ### B6 — Pool o Lane con nombre de acción en lugar de rol
 **Problema**: un lane se llama "Revisar solicitud" en lugar del rol que la revisa.
-**Corrección**: nombrar con el rol/área/entidad. Ej: "Analista de crédito", "Sistema ERP".
+**Corrección**: nombrar con el rol/área/entidad. Ej: "Analista de crédito", "Sistema ERP" (si corresponde como pool), "Área de Finanzas".
+
+### B7 — Happy path no visible como línea recta
+**Problema**: el flujo principal de éxito zigzaguea o retrocede, mezclándose visualmente con excepciones.
+**Efecto**: dificulta la lectura del proceso; auditores e implementadores no pueden distinguir el camino normal del excepcional.
+**Corrección**: el happy path debe ser una línea recta continua de izquierda a derecha. Las excepciones se desvían hacia abajo, se tratan, y terminan en un End Event independiente o retornan al flujo principal. Ver principio 12 de SKILL.md.
 
 ---
 
@@ -104,7 +156,7 @@ White (2004) *Introduction to BPMN*, Bizagi (2017) *BPMN Quick Start Guide*.
 
 ### C2 — Timeout no modelado
 **Problema**: el documento menciona plazos o tiempos de espera pero el modelo no los representa.
-**Corrección**: usar Boundary Timer Event (interrupting para cancelar, non-interrupting para notificar sin cancelar).
+**Corrección**: usar Boundary Timer Event (interrupting para cancelar, non-interrupting para notificar sin cancelar). Nunca usar una tarea para representar una espera. Ver A15.
 
 ### C3 — Colaboración externa no representada
 **Problema**: el proceso interactúa con un cliente, proveedor o sistema externo pero todo se modela en un solo pool.
@@ -113,6 +165,11 @@ White (2004) *Introduction to BPMN*, Bizagi (2017) *BPMN Quick Start Guide*.
 ### C4 — Datos de decisión omitidos
 **Problema**: un gateway toma una decisión pero no se documenta qué datos o regla la determina.
 **Corrección**: asociar un Data Object o Business Rule Task que alimenta la decisión. Al menos anotarlo.
+
+### C5 — Excepción global sin Event Sub-Process
+**Problema**: una condición de excepción (ej. "el cliente cancela en cualquier momento") se repite en cada paso del proceso como un camino alternativo.
+**Efecto**: el modelo se vuelve ilegible y difícil de mantener; la misma lógica aparece duplicada.
+**Corrección**: modelar la excepción como Event Sub-Process (borde punteado), que se activa en cualquier punto del proceso cuando ocurre el evento, sin necesidad de repetirlo en cada paso.
 
 ---
 
@@ -127,7 +184,7 @@ White (2004) *Introduction to BPMN*, Bizagi (2017) *BPMN Quick Start Guide*.
 **Corrección**: elegir un término canónico y usarlo en todo el modelo.
 
 ### D3 — Niveles de abstracción mezclados
-**Problema**: algunas actividades son de alto nivel (subproceso potencial) y otras son tareas atómicas, sin distinguir visualmente la diferencia.
+**Problema**: algunas actividades son de alto nivel (subproceso potencial) y otras son tareas atómicas, sin distinguir visualmente.
 **Corrección**: usar Sub-Process para actividades que contienen lógica detallable; usar Task solo para actividades atómicas. Ser consistente en el nivel de detalle de cada diagrama.
 
 ### D4 — Gateway convergente de tipo incorrecto
@@ -139,8 +196,6 @@ White (2004) *Introduction to BPMN*, Bizagi (2017) *BPMN Quick Start Guide*.
 
 ## E. Checklist rápido de revisión
 
-Antes de emitir la especificación, verificar:
-
 ```
 Correctitud:
 [ ] Toda actividad: ≥1 secuencia entrada + ≥1 secuencia salida
@@ -150,8 +205,15 @@ Correctitud:
 [ ] No hay flujos AND/OR convergiendo directamente en una actividad sin gateway de join
 [ ] No hay múltiples Conditional Sequence Flows saliendo de la misma actividad
 [ ] Conditional Sequence Flows solo salen de actividades o Gateways XOR/OR — nunca de eventos ni AND/EBG
-[ ] Boundary events adjuntos a la actividad correcta
+[ ] Boundary events adjuntos a la actividad correcta (no a gateways ni eventos)
 [ ] No hay actividades aisladas sin justificación
+[ ] Cada compuerta es SOLO Diverging O SOLO Converging (no ambas) → A10
+[ ] Toda compuerta XOR u OR tiene exactamente un arco "default" → A11
+[ ] End Terminate justificado si hay flujos paralelos → A12
+[ ] Event Sub-Process sin sequence flows de entrada ni salida → A13
+[ ] Call Activity justificada por reutilización multi-proceso → A14
+[ ] No hay tareas cuyo propósito sea "esperar" → A15
+[ ] No hay lanes para sistemas pasivos → A16
 
 Claridad:
 [ ] Tareas: verbo + objeto
@@ -159,6 +221,7 @@ Claridad:
 [ ] Eventos de inicio: trigger nombrado
 [ ] Eventos de fin: resultado de negocio nombrado
 [ ] Pools/Lanes: nombre de rol/entidad, no de acción
+[ ] Happy path visible como línea recta horizontal → B7
 
 Completitud:
 [ ] Happy path completo
@@ -166,6 +229,7 @@ Completitud:
 [ ] Todas las excepciones del documento fuente representadas
 [ ] Timeouts y plazos modelados
 [ ] Actores externos representados (al menos como black-box pool)
+[ ] Excepciones globales modeladas como Event Sub-Process si aplica → C5
 
 Consistencia:
 [ ] Nomenclatura uniforme en todo el modelo
