@@ -1,28 +1,6 @@
 ---
 name: bpmn-process-designer
-description: >
-  Analiza documentos de negocio y construye una especificación intermedia,
-  rigurosa y validada de un proceso en BPMN 2.0 antes de generar notación XML.
-  Úsala SIEMPRE que el usuario entregue procedimientos, manuales, políticas,
-  narrativas operativas, casos de uso, instrucciones de trabajo, flujos o
-  cualquier descripción de proceso que deba convertirse en un modelo BPMN
-  correcto, claro, completo y consistente. También activa esta skill cuando
-  el usuario pida identificar participantes, decisiones, excepciones, gateways
-  o eventos en un documento, o quiera validar si un proceso está listo para
-  diagramarse o convertirse a XML.
-license: MIT
-compatibility: markdown-skill
-metadata:
-  domain: business-process-modeling
-  standard: BPMN 2.0
-  language: es
-  output_mode: structured-markdown
-  reasoning_style: deterministic
-  downstream_target: BPMN-XML
-  references:
-    - references/elementos.md
-    - references/antipatrones.md
-    - references/xml-layout.md
+description: "Modela procesos en BPMN 2.0. Úsala cuando el usuario entregue procedimientos, flujos, manuales o narrativas operativas que deban convertirse en un diagrama BPMN correcto y completo."
 ---
 
 # BPMN Process Designer Skill
@@ -356,6 +334,9 @@ Ver §5 (Contrato de salida). Emitir solo tras aprobación del usuario.
 
 Esta fase se activa exclusivamente después de que el usuario apruebe la arquitectura de la Fase 1.
 
+> **Regla de oro**: en esta fase Claude genera el **JSON spec** y ejecuta
+> `bpmn_layout.py` para obtener el XML. Nunca se calculan coordenadas manualmente.
+
 ---
 
 ## 5. Contrato de salida obligatorio
@@ -461,7 +442,7 @@ Si el proceso no está listo, indicar: qué falta, qué preguntas hacer, qué pa
 
 ## 8. Generación de XML — Fase 2
 
-### Checklist pre-emisión XML (ejecutar antes de escribir el archivo)
+### Checklist pre-emisión JSON spec (ejecutar antes de generar el JSON para el script)
 - [ ] ¿El proceso tiene lanes? → declarar `laneSet` con todos los `flowNodeRef`
 - [ ] ¿Hay pools externos? → declarar proceso vacío + `processRef`
 - [ ] ¿Todos los participantes internos son lanes, no pools? → verificar decisión
@@ -502,14 +483,52 @@ xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
 
 **Pools internos vs. externos**: usar un Pool separado solo cuando la entidad es organizacionalmente independiente (proveedor, banco, cliente). Áreas o departamentos de la misma organización van como Lanes dentro del mismo Pool, aunque intercambien comunicaciones formales internas.
 
-### Reglas para la capa visual (bpmndi:BPMNDiagram)
+### Capa visual — Auto-layout con `bpmn_layout.py`
 
-Leer `references/xml-layout.md`. Resumen:
-- StartEvent: X=200; avanzar izquierda a derecha; gap entre elementos = 140px.
-- Cada Lane: altura fija 180px; elementos centrados verticalmente.
-- Task 100×80; Event 36×36; Gateway 50×50.
-- Anclaje entrada: cara izquierda (x, y+h/2); salida: cara derecha (x+w, y+h/2).
-- Gateways: entrada izquierda; salida 1 (happy path) derecha; salida 2 (excepción) inferior; salida 3 superior.
-- Sin líneas diagonales; flujo ortogonal.
-- Buffer mínimo 150px entre pools.
-- Salida: XML bien indentado, listo para guardar como `.bpmn`.
+**NUNCA calcular posiciones manualmente.** El layout lo genera el script Python
+`bpmn_layout.py` que forma parte de este proyecto.
+
+#### Flujo de trabajo obligatorio en Fase 2
+
+1. **Asegurar que el script existe** en el directorio de trabajo.
+   Si no existe en `/home/claude/bpmn_layout.py`, leerlo desde los archivos del
+   proyecto y crearlo ahí antes de continuar:
+   ```bash
+   # Verificar existencia
+   ls /home/claude/bpmn_layout.py 2>/dev/null || echo "MISSING"
+   # Si falta: crear el archivo con el contenido de bpmn_layout.py del proyecto
+   ```
+
+2. **Emitir el JSON spec** — traducir la especificación aprobada (Fase 1) a una
+   estructura JSON conforme al esquema documentado al inicio de `bpmn_layout.py`.
+   El JSON describe *qué* existe (pools, lanes, elements, flows); el script decide
+   *dónde* va cada cosa.
+
+3. **Guardar el JSON** como `/home/claude/spec.json`.
+
+4. **Ejecutar el script**:
+   ```bash
+   python3 /home/claude/bpmn_layout.py /home/claude/spec.json /home/claude/proceso.bpmn
+   ```
+   El script devuelve el XML completo con `bpmndi:BPMNDiagram` correctamente
+   poblado: `BPMNShape` con `Bounds`, `BPMNEdge` con `waypoint` ortogonales.
+
+5. **Presentar** `/home/claude/proceso.bpmn` al usuario con `present_files`.
+
+#### Reglas del JSON spec (resumen rápido)
+
+| Campo | Descripción |
+|---|---|
+| `pools[].is_internal` | `true` → pool con lanes y elementos; `false` → black-box |
+| `pools[].lanes[].sequence` | Lista ordenada L→R de IDs de elementos en esa lane |
+| `elements.<id>.type` | Tipo BPMN exacto: `userTask`, `exclusiveGateway`, `startEvent`, `boundaryEvent`, etc. |
+| `elements.<id>.direction` | Para gateways: `"Diverging"` o `"Converging"` |
+| `elements.<id>.default` | Para XOR/OR: ID del sequence flow por defecto |
+| `elements.<id>.attachedTo` | Para `boundaryEvent`: ID del task host |
+| `elements.<id>.eventDef` | `none`, `message`, `timer`, `error`, `terminate`, etc. |
+| `sequence_flows[].isDefault` | `true` → es el default flow (no lleva conditionExpression) |
+
+#### Constantes de layout usadas por el script (referencia)
+- Lane height: **180 px** · Task: **100×80** · Event: **36×36** · Gateway: **50×50**
+- Gap horizontal entre columnas: **140 px** · Start X: **200 px**
+- Pool label band: **30 px** · Flujo ortogonal · Buffer entre pools: **150 px**
